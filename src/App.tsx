@@ -22,6 +22,14 @@ export interface GitHubRepoData {
   }
 }
 
+export interface HealthScoreResult {
+  score: number
+  status: 'Healthy' | 'Needs Attention' | 'Inactive'
+  colorClass: 'score-green' | 'score-amber' | 'score-red'
+  daysSinceLastPush: number
+  reason: string
+}
+
 export function parseGitHubRepo(input: string): { owner: string; repo: string } | null {
   const trimmed = input.trim()
   if (!trimmed) return null
@@ -46,6 +54,74 @@ export function parseGitHubRepo(input: string): { owner: string; repo: string } 
 
 export function formatNumber(num: number): string {
   return new Intl.NumberFormat('en-US').format(num)
+}
+
+export function calculateHealthScore(repo: GitHubRepoData): HealthScoreResult {
+  let score = 100
+  const lastActiveDate = new Date(repo.pushed_at || repo.updated_at)
+  const daysSinceLastPush = Math.max(
+    0,
+    Math.floor((Date.now() - lastActiveDate.getTime()) / (1000 * 60 * 60 * 24))
+  )
+
+  // 1. Recency Penalty (Max -70)
+  if (daysSinceLastPush > 730) {
+    score -= 70 // 2+ years untouched
+  } else if (daysSinceLastPush > 365) {
+    score -= 50 // 1+ year untouched
+  } else if (daysSinceLastPush > 180) {
+    score -= 35 // 6+ months
+  } else if (daysSinceLastPush > 90) {
+    score -= 20 // 3+ months
+  } else if (daysSinceLastPush > 30) {
+    score -= 10 // 1 month
+  }
+
+  // 2. Open Issues Penalty
+  if (repo.open_issues_count > 500 && daysSinceLastPush > 60) {
+    score -= 15
+  } else if (repo.open_issues_count > 200 && daysSinceLastPush > 30) {
+    score -= 10
+  } else if (repo.open_issues_count > 100 && daysSinceLastPush > 14) {
+    score -= 5
+  }
+
+  // 3. Popularity / Community Bonus (up to +15)
+  if (repo.stargazers_count > 10000) {
+    score += 15
+  } else if (repo.stargazers_count > 1000) {
+    score += 10
+  } else if (repo.stargazers_count > 100) {
+    score += 5
+  }
+
+  const finalScore = Math.max(0, Math.min(100, Math.round(score)))
+
+  if (finalScore >= 80) {
+    return {
+      score: finalScore,
+      status: 'Healthy',
+      colorClass: 'score-green',
+      daysSinceLastPush,
+      reason: daysSinceLastPush === 0 ? 'Updated today with active maintainers' : `Updated ${daysSinceLastPush}d ago with high activity`
+    }
+  } else if (finalScore >= 50) {
+    return {
+      score: finalScore,
+      status: 'Needs Attention',
+      colorClass: 'score-amber',
+      daysSinceLastPush,
+      reason: `Moderate activity, last updated ${daysSinceLastPush} days ago`
+    }
+  } else {
+    return {
+      score: finalScore,
+      status: 'Inactive',
+      colorClass: 'score-red',
+      daysSinceLastPush,
+      reason: `Stale repository, last activity was ${daysSinceLastPush} days ago`
+    }
+  }
 }
 
 function App() {
@@ -96,6 +172,8 @@ function App() {
     }
   }
 
+  const healthScore = repoData ? calculateHealthScore(repoData) : null
+
   return (
     <div className="container">
       <header className={`header ${repoData ? 'header-compact' : ''}`}>
@@ -129,7 +207,7 @@ function App() {
         )}
       </form>
 
-      {repoData && (
+      {repoData && healthScore && (
         <main className="results-container">
           <div className="repo-header">
             <h2 className="repo-title">
@@ -142,6 +220,24 @@ function App() {
             </p>
           </div>
 
+          {/* Feature 5: Repo Health Score Banner */}
+          <section className="health-score-card">
+            <div className="health-score-left">
+              <span className="health-score-title">Repository Health Score</span>
+              <p className="health-score-subtitle">{healthScore.reason}</p>
+            </div>
+            <div className="health-score-right">
+              <div className={`health-score-number ${healthScore.colorClass}`}>
+                {healthScore.score}
+                <span className="score-max">/100</span>
+              </div>
+              <span className={`health-status-badge ${healthScore.colorClass}`}>
+                {healthScore.status}
+              </span>
+            </div>
+          </section>
+
+          {/* Feature 4: Stats Grid */}
           <div className="stats-grid">
             <div className="stat-card">
               <span className="stat-value">{formatNumber(repoData.stargazers_count)}</span>
