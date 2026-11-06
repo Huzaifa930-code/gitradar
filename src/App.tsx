@@ -1,5 +1,6 @@
 import React, { useState } from 'react'
 import './App.css'
+import { CommitChart, CommitWeek } from './components/CommitChart'
 
 export interface GitHubRepoData {
   id: number
@@ -103,7 +104,10 @@ export function calculateHealthScore(repo: GitHubRepoData): HealthScoreResult {
       status: 'Healthy',
       colorClass: 'score-green',
       daysSinceLastPush,
-      reason: daysSinceLastPush === 0 ? 'Updated today with active maintainers' : `Updated ${daysSinceLastPush}d ago with high activity`
+      reason:
+        daysSinceLastPush === 0
+          ? 'Updated today with active maintainers'
+          : `Updated ${daysSinceLastPush}d ago with high activity`
     }
   } else if (finalScore >= 50) {
     return {
@@ -130,6 +134,11 @@ function App() {
   const [error, setError] = useState<string | null>(null)
   const [repoData, setRepoData] = useState<GitHubRepoData | null>(null)
 
+  // Commit Activity State
+  const [commitActivity, setCommitActivity] = useState<CommitWeek[] | null>(null)
+  const [commitActivityLoading, setCommitActivityLoading] = useState(false)
+  const [commitActivityNotice, setCommitActivityNotice] = useState<string | null>(null)
+
   const handleAnalyze = async (e: React.FormEvent) => {
     e.preventDefault()
     setError(null)
@@ -142,13 +151,17 @@ function App() {
 
     const { owner, repo } = parsed
     setLoading(true)
+    setCommitActivity(null)
+    setCommitActivityNotice(null)
 
     try {
+      // 1. Fetch Repository Details
       const response = await fetch(`https://api.github.com/repos/${owner}/${repo}`)
 
       if (response.status === 404) {
         setError(`Repository "${owner}/${repo}" was not found on GitHub.`)
         setRepoData(null)
+        setLoading(false)
         return
       }
 
@@ -157,18 +170,60 @@ function App() {
         const message = errorData.message || `GitHub API error (Status ${response.status})`
         setError(message)
         setRepoData(null)
+        setLoading(false)
         return
       }
 
       const data: GitHubRepoData = await response.json()
       console.log('GitHub Repo Data:', data)
       setRepoData(data)
+      setLoading(false)
+
+      // 2. Fetch 52-Week Commit Activity
+      fetchCommitActivity(owner, repo)
     } catch (err: unknown) {
       console.error('Fetch error:', err)
       setError('Network error: Unable to connect to GitHub API. Please check your internet connection.')
       setRepoData(null)
-    } finally {
       setLoading(false)
+    }
+  }
+
+  const fetchCommitActivity = async (owner: string, repo: string) => {
+    setCommitActivityLoading(true)
+    setCommitActivityNotice(null)
+
+    try {
+      const commitRes = await fetch(`https://api.github.com/repos/${owner}/${repo}/stats/commit_activity`)
+
+      if (commitRes.status === 202) {
+        setCommitActivityNotice(
+          'GitHub is currently compiling commit statistics for this repository. Please re-analyze in a moment.'
+        )
+        setCommitActivity(null)
+        return
+      }
+
+      if (!commitRes.ok) {
+        setCommitActivityNotice('Could not retrieve commit activity history at this time.')
+        setCommitActivity(null)
+        return
+      }
+
+      const commitData = await commitRes.json()
+      if (Array.isArray(commitData) && commitData.length > 0) {
+        setCommitActivity(commitData)
+      } else {
+        setCommitActivityNotice(
+          'GitHub is currently calculating commit activity for this repo. Please check back shortly.'
+        )
+        setCommitActivity(null)
+      }
+    } catch (err) {
+      console.warn('Commit activity fetch error:', err)
+      setCommitActivityNotice('Unable to load commit activity due to network limits.')
+    } finally {
+      setCommitActivityLoading(false)
     }
   }
 
@@ -259,6 +314,13 @@ function App() {
               <span className="stat-label">Watchers</span>
             </div>
           </div>
+
+          {/* Feature 6: Commit Activity Chart */}
+          <CommitChart
+            data={commitActivity}
+            isLoading={commitActivityLoading}
+            notice={commitActivityNotice}
+          />
         </main>
       )}
     </div>
