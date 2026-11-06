@@ -1,1 +1,128 @@
-/* App styles */
+.container {
+  min-height: 100vh;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  padding: 2rem 1.5rem;
+  max-width: 900px;
+  margin: 0 auto;
+}
+
+.header {
+  text-align: center;
+  margin-bottom: 2.5rem;
+}
+
+.logo-badge {
+  display: inline-flex;
+  align-items: center;
+  gap: 0.75rem;
+  font-size: 3rem;
+  font-weight: 800;
+  letter-spacing: -0.03em;
+  color: #f0f6fc;
+  margin-bottom: 0.75rem;
+}
+
+.radar-ping {
+  display: inline-block;
+  width: 14px;
+  height: 14px;
+  background-color: #2ea043;
+  border-radius: 50%;
+  box-shadow: 0 0 12px #2ea043;
+  animation: pulse 2s infinite;
+}
+
+@keyframes pulse {
+  0% {
+    transform: scale(0.95);
+    box-shadow: 0 0 0 0 rgba(46, 160, 67, 0.7);
+  }
+  70% {
+    transform: scale(1);
+    box-shadow: 0 0 0 10px rgba(46, 160, 67, 0);
+  }
+  100% {
+    transform: scale(0.95);
+    box-shadow: 0 0 0 0 rgba(46, 160, 67, 0);
+  }
+}
+
+.tagline {
+  font-size: 1.15rem;
+  color: #8b949e;
+  max-width: 540px;
+  line-height: 1.5;
+  margin: 0 auto;
+}
+
+.search-form {
+  width: 100%;
+  max-width: 680px;
+}
+
+.input-group {
+  display: flex;
+  gap: 0.75rem;
+  background: #161b22;
+  padding: 0.4rem;
+  border-radius: 12px;
+  border: 1px solid #30363d;
+  box-shadow: 0 10px 25px -5px rgba(0, 0, 0, 0.5);
+  transition: border-color 0.2s, box-shadow 0.2s;
+}
+
+.input-group:focus-within {
+  border-color: #58a6ff;
+  box-shadow: 0 0 0 3px rgba(88, 166, 255, 0.15), 0 10px 25px -5px rgba(0, 0, 0, 0.5);
+}
+
+.search-input {
+  flex: 1;
+  background: transparent;
+  border: none;
+  padding: 0.85rem 1rem;
+  font-size: 1rem;
+  color: #f0f6fc;
+  outline: none;
+}
+
+.search-input::placeholder {
+  color: #6e7681;
+}
+
+.analyze-btn {
+  background: #238636;
+  color: #ffffff;
+  border: none;
+  border-radius: 8px;
+  padding: 0.85rem 1.6rem;
+  font-size: 1rem;
+  font-weight: 600;
+  cursor: pointer;
+  transition: background 0.15s ease, transform 0.1s ease;
+  white-space: nowrap;
+}
+
+.analyze-btn:hover {
+  background: #2ea043;
+}
+
+.analyze-btn:active {
+  transform: scale(0.98);
+}
+
+@media (max-width: 640px) {
+  .logo-badge {
+    font-size: 2.25rem;
+  }
+  .input-group {
+    flex-direction: column;
+    padding: 0.75rem;
+  }
+  .analyze-btn {
+    width: 100%;
+  }
+}
