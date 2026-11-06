@@ -44,10 +44,15 @@ export function parseGitHubRepo(input: string): { owner: string; repo: string } 
   return null
 }
 
+export function formatNumber(num: number): string {
+  return new Intl.NumberFormat('en-US').format(num)
+}
+
 function App() {
   const [repoUrl, setRepoUrl] = useState('')
   const [loading, setLoading] = useState(false)
   const [error, setError] = useState<string | null>(null)
+  const [repoData, setRepoData] = useState<GitHubRepoData | null>(null)
 
   const handleAnalyze = async (e: React.FormEvent) => {
     e.preventDefault()
@@ -67,6 +72,7 @@ function App() {
 
       if (response.status === 404) {
         setError(`Repository "${owner}/${repo}" was not found on GitHub.`)
+        setRepoData(null)
         return
       }
 
@@ -74,14 +80,17 @@ function App() {
         const errorData = await response.json().catch(() => ({}))
         const message = errorData.message || `GitHub API error (Status ${response.status})`
         setError(message)
+        setRepoData(null)
         return
       }
 
       const data: GitHubRepoData = await response.json()
       console.log('GitHub Repo Data:', data)
+      setRepoData(data)
     } catch (err: unknown) {
       console.error('Fetch error:', err)
       setError('Network error: Unable to connect to GitHub API. Please check your internet connection.')
+      setRepoData(null)
     } finally {
       setLoading(false)
     }
@@ -89,7 +98,7 @@ function App() {
 
   return (
     <div className="container">
-      <header className="header">
+      <header className={`header ${repoData ? 'header-compact' : ''}`}>
         <div className="logo-badge">
           <span className="radar-ping"></span>
           GitRadar
@@ -119,6 +128,43 @@ function App() {
           </div>
         )}
       </form>
+
+      {repoData && (
+        <main className="results-container">
+          <div className="repo-header">
+            <h2 className="repo-title">
+              <a href={repoData.html_url} target="_blank" rel="noopener noreferrer">
+                {repoData.full_name}
+              </a>
+            </h2>
+            <p className="repo-description">
+              {repoData.description || 'No description provided for this repository.'}
+            </p>
+          </div>
+
+          <div className="stats-grid">
+            <div className="stat-card">
+              <span className="stat-value">{formatNumber(repoData.stargazers_count)}</span>
+              <span className="stat-label">Stars</span>
+            </div>
+
+            <div className="stat-card">
+              <span className="stat-value">{formatNumber(repoData.forks_count)}</span>
+              <span className="stat-label">Forks</span>
+            </div>
+
+            <div className="stat-card">
+              <span className="stat-value">{formatNumber(repoData.open_issues_count)}</span>
+              <span className="stat-label">Open Issues</span>
+            </div>
+
+            <div className="stat-card">
+              <span className="stat-value">{formatNumber(repoData.subscribers_count)}</span>
+              <span className="stat-label">Watchers</span>
+            </div>
+          </div>
+        </main>
+      )}
     </div>
   )
 }
