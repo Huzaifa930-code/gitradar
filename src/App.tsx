@@ -470,7 +470,54 @@ function App() {
             {loading ? 'Analyzing...' : 'Analyze'}
           </button>
         </div>
+
+        {/* Quick Example Buttons */}
+        <div className="quick-examples">
+          <span className="examples-label">Examples:</span>
+          {['facebook/react', 'microsoft/vscode', 'torvalds/linux'].map((example) => (
+            <button
+              key={example}
+              type="button"
+              className="example-btn"
+              onClick={() => {
+                setRepoUrl(example)
+              }}
+              title={`Load ${example}`}
+            >
+              <code>{example}</code>
+            </button>
+          ))}
+        </div>
       </form>
+
+      {/* Hero Feature Highlights (Shown on Home screen) */}
+      {!repoData && !loading && !error && (
+        <section className="hero-features" aria-label="GitRadar features">
+          <div className="feature-highlight-card">
+            <span className="feature-icon">🛡️</span>
+            <div className="feature-text">
+              <h3 className="feature-title">Health Score</h3>
+              <p className="feature-desc">0–100 algorithmic codebase vitality rating</p>
+            </div>
+          </div>
+
+          <div className="feature-highlight-card">
+            <span className="feature-icon">📈</span>
+            <div className="feature-text">
+              <h3 className="feature-title">Commit Activity</h3>
+              <p className="feature-desc">52-week visual commit velocity chart</p>
+            </div>
+          </div>
+
+          <div className="feature-highlight-card">
+            <span className="feature-icon">👥</span>
+            <div className="feature-text">
+              <h3 className="feature-title">Top Contributors</h3>
+              <p className="feature-desc">Core author rankings & contribution volume</p>
+            </div>
+          </div>
+        </section>
+      )}
 
       {/* Feature 10: Rich Error Alert with Try Again action */}
       {error && !loading && (

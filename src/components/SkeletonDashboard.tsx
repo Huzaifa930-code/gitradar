@@ -78,3 +78,4 @@ export const SkeletonDashboard: React.FC = () => {
     </div>
   )
 }
+

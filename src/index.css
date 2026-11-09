@@ -10,4 +10,12 @@ body {
   background-color: #0d1117;
   color: #f0f6fc;
   min-height: 100vh;
+  /* Depth Layer: Top glow + radar green aura + subtle dot matrix grid */
+  background-image: 
+    radial-gradient(ellipse 90% 45% at 50% 0%, rgba(56, 139, 253, 0.12), rgba(13, 17, 23, 0) 70%),
+    radial-gradient(circle at 50% 180px, rgba(46, 160, 67, 0.06), transparent 50%),
+    radial-gradient(rgba(240, 246, 252, 0.07) 1px, transparent 1px);
+  background-size: 100% 100%, 100% 100%, 28px 28px;
+  background-position: 0 0, 0 0, 0 0;
+  background-attachment: fixed;
 }
