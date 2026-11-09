@@ -1,4 +1,4 @@
-import React, { useState } from 'react'
+import React, { useState, useEffect, useCallback } from 'react'
 import './App.css'
 import { CommitChart, CommitWeek } from './components/CommitChart'
 import { TopContributors, Contributor } from './components/TopContributors'
@@ -151,61 +151,8 @@ function App() {
   const [recentCommitsLoading, setRecentCommitsLoading] = useState(false)
   const [recentCommitsError, setRecentCommitsError] = useState<string | null>(null)
 
-  const handleAnalyze = async (e: React.FormEvent) => {
-    e.preventDefault()
-    setError(null)
-
-    const parsed = parseGitHubRepo(repoUrl)
-    if (!parsed) {
-      setError('Please enter a valid GitHub repository URL or format (e.g. owner/repo)')
-      return
-    }
-
-    const { owner, repo } = parsed
-    setLoading(true)
-    setCommitActivity(null)
-    setCommitActivityNotice(null)
-    setContributors(null)
-    setContributorsError(null)
-    setRecentCommits(null)
-    setRecentCommitsError(null)
-
-    try {
-      // 1. Fetch Repository Details
-      const response = await fetch(`https://api.github.com/repos/${owner}/${repo}`)
-
-      if (response.status === 404) {
-        setError(`Repository "${owner}/${repo}" was not found on GitHub.`)
-        setRepoData(null)
-        setLoading(false)
-        return
-      }
-
-      if (!response.ok) {
-        const errorData = await response.json().catch(() => ({}))
-        const message = errorData.message || `GitHub API error (Status ${response.status})`
-        setError(message)
-        setRepoData(null)
-        setLoading(false)
-        return
-      }
-
-      const data: GitHubRepoData = await response.json()
-      console.log('GitHub Repo Data:', data)
-      setRepoData(data)
-      setLoading(false)
-
-      // 2. Fetch Commit Activity, Contributors, and Recent Commits concurrently
-      fetchCommitActivity(owner, repo)
-      fetchContributors(owner, repo)
-      fetchRecentCommits(owner, repo)
-    } catch (err: unknown) {
-      console.error('Fetch error:', err)
-      setError('Network error: Unable to connect to GitHub API. Please check your internet connection.')
-      setRepoData(null)
-      setLoading(false)
-    }
-  }
+  // Feature 9: Shareable Link State
+  const [copied, setCopied] = useState(false)
 
   const fetchCommitActivity = async (owner: string, repo: string) => {
     setCommitActivityLoading(true)
@@ -299,6 +246,119 @@ function App() {
     }
   }
 
+  const analyzeRepo = useCallback(async (input: string, syncUrl = true) => {
+    setError(null)
+
+    const parsed = parseGitHubRepo(input)
+    if (!parsed) {
+      setError('Please enter a valid GitHub repository URL or format (e.g. owner/repo)')
+      return
+    }
+
+    const { owner, repo } = parsed
+    const fullRepoPath = `${owner}/${repo}`
+
+    if (syncUrl) {
+      const url = new URL(window.location.href)
+      url.searchParams.set('repo', fullRepoPath)
+      window.history.pushState({}, '', url.toString())
+    }
+
+    setLoading(true)
+    setCommitActivity(null)
+    setCommitActivityNotice(null)
+    setContributors(null)
+    setContributorsError(null)
+    setRecentCommits(null)
+    setRecentCommitsError(null)
+
+    try {
+      const response = await fetch(`https://api.github.com/repos/${owner}/${repo}`)
+
+      if (response.status === 404) {
+        setError(`Repository "${owner}/${repo}" was not found on GitHub.`)
+        setRepoData(null)
+        setLoading(false)
+        return
+      }
+
+      if (!response.ok) {
+        const errorData = await response.json().catch(() => ({}))
+        const message = errorData.message || `GitHub API error (Status ${response.status})`
+        setError(message)
+        setRepoData(null)
+        setLoading(false)
+        return
+      }
+
+      const data: GitHubRepoData = await response.json()
+      console.log('GitHub Repo Data:', data)
+      setRepoData(data)
+      setLoading(false)
+
+      fetchCommitActivity(owner, repo)
+      fetchContributors(owner, repo)
+      fetchRecentCommits(owner, repo)
+    } catch (err: unknown) {
+      console.error('Fetch error:', err)
+      setError('Network error: Unable to connect to GitHub API. Please check your internet connection.')
+      setRepoData(null)
+      setLoading(false)
+    }
+  }, [])
+
+  // Feature 9: Check URL parameters on mount
+  useEffect(() => {
+    const params = new URLSearchParams(window.location.search)
+    const repoParam = params.get('repo')
+    if (repoParam) {
+      setRepoUrl(repoParam)
+      analyzeRepo(repoParam, false)
+    }
+
+    const handlePopState = () => {
+      const updatedParams = new URLSearchParams(window.location.search)
+      const currentRepo = updatedParams.get('repo')
+      if (currentRepo) {
+        setRepoUrl(currentRepo)
+        analyzeRepo(currentRepo, false)
+      } else {
+        setRepoData(null)
+        setRepoUrl('')
+      }
+    }
+
+    window.addEventListener('popstate', handlePopState)
+    return () => window.removeEventListener('popstate', handlePopState)
+  }, [analyzeRepo])
+
+  const handleFormSubmit = (e: React.FormEvent) => {
+    e.preventDefault()
+    analyzeRepo(repoUrl, true)
+  }
+
+  const handleCopyLink = async () => {
+    try {
+      if (navigator.clipboard && window.isSecureContext) {
+        await navigator.clipboard.writeText(window.location.href)
+      } else {
+        const textArea = document.createElement('textarea')
+        textArea.value = window.location.href
+        textArea.style.position = 'fixed'
+        textArea.style.left = '-9999px'
+        document.body.appendChild(textArea)
+        textArea.focus()
+        textArea.select()
+        document.execCommand('copy')
+        textArea.remove()
+      }
+      setCopied(true)
+      setTimeout(() => setCopied(false), 2000)
+    } catch (err) {
+      console.error('Failed to copy URL:', err)
+    }
+  }
+
   const healthScore = repoData ? calculateHealthScore(repoData) : null
 
   return (
@@ -311,7 +371,7 @@ function App() {
         <p className="tagline">Instant visual breakdown and health check for any GitHub repository</p>
       </header>
 
-      <form className="search-form" onSubmit={handleAnalyze}>
+      <form className="search-form" onSubmit={handleFormSubmit}>
         <div className="input-group">
           <input
             type="text"
@@ -337,11 +397,34 @@ function App() {
       {repoData && healthScore && (
         <main className="results-container">
           <div className="repo-header">
-            <h2 className="repo-title">
-              <a href={repoData.html_url} target="_blank" rel="noopener noreferrer">
-                {repoData.full_name}
-              </a>
-            </h2>
+            <div className="repo-header-top">
+              <h2 className="repo-title">
+                <a href={repoData.html_url} target="_blank" rel="noopener noreferrer">
+                  {repoData.full_name}
+                </a>
+              </h2>
+
+              {/* Feature 9: Copy Link Button */}
+              <button
+                type="button"
+                className={`copy-link-btn ${copied ? 'copied' : ''}`}
+                onClick={handleCopyLink}
+                title="Copy shareable link to this analysis"
+              >
+                {copied ? (
+                  <>
+                    <span className="copy-icon">✓</span>
+                    <span>Copied!</span>
+                  </>
+                ) : (
+                  <>
+                    <span className="copy-icon">🔗</span>
+                    <span>Copy Link</span>
+                  </>
+                )}
+              </button>
+            </div>
+
             <p className="repo-description">
               {repoData.description || 'No description provided for this repository.'}
             </p>

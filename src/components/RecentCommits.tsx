@@ -152,3 +152,4 @@ export const RecentCommits: React.FC<RecentCommitsProps> = ({
     </section>
   )
 }
+
