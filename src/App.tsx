@@ -494,7 +494,19 @@ function App() {
       {!repoData && !loading && !error && (
         <section className="hero-features" aria-label="GitRadar features">
           <div className="feature-highlight-card">
-            <span className="feature-icon">🛡️</span>
+            <div className="feature-icon-wrapper" aria-hidden="true">
+              <svg
+                className="feature-svg-icon"
+                viewBox="0 0 24 24"
+                fill="none"
+                stroke="currentColor"
+                strokeWidth="2"
+                strokeLinecap="round"
+                strokeLinejoin="round"
+              >
+                <path d="M22 12h-4l-3 9L9 3l-3 9H2" />
+              </svg>
+            </div>
             <div className="feature-text">
               <h3 className="feature-title">Health Score</h3>
               <p className="feature-desc">0–100 algorithmic codebase vitality rating</p>
@@ -502,7 +514,21 @@ function App() {
           </div>
 
           <div className="feature-highlight-card">
-            <span className="feature-icon">📈</span>
+            <div className="feature-icon-wrapper" aria-hidden="true">
+              <svg
+                className="feature-svg-icon"
+                viewBox="0 0 24 24"
+                fill="none"
+                stroke="currentColor"
+                strokeWidth="2"
+                strokeLinecap="round"
+                strokeLinejoin="round"
+              >
+                <line x1="18" y1="20" x2="18" y2="4" />
+                <line x1="6" y1="20" x2="6" y2="14" />
+                <line x1="12" y1="20" x2="12" y2="10" />
+              </svg>
+            </div>
             <div className="feature-text">
               <h3 className="feature-title">Commit Activity</h3>
               <p className="feature-desc">52-week visual commit velocity chart</p>
@@ -510,7 +536,22 @@ function App() {
           </div>
 
           <div className="feature-highlight-card">
-            <span className="feature-icon">👥</span>
+            <div className="feature-icon-wrapper" aria-hidden="true">
+              <svg
+                className="feature-svg-icon"
+                viewBox="0 0 24 24"
+                fill="none"
+                stroke="currentColor"
+                strokeWidth="2"
+                strokeLinecap="round"
+                strokeLinejoin="round"
+              >
+                <path d="M16 21v-2a4 4 0 0 0-4-4H6a4 4 0 0 0-4 4v2" />
+                <circle cx="9" cy="7" r="4" />
+                <path d="M22 21v-2a4 4 0 0 0-3-3.87" />
+                <path d="M16 3.13a4 4 0 0 1 0 7.75" />
+              </svg>
+            </div>
             <div className="feature-text">
               <h3 className="feature-title">Top Contributors</h3>
               <p className="feature-desc">Core author rankings & contribution volume</p>

@@ -206,9 +206,30 @@
   box-shadow: 0 8px 24px rgba(0, 0, 0, 0.4);
 }
 
-.feature-icon {
-  font-size: 1.75rem;
-  line-height: 1;
+.feature-icon-wrapper {
+  width: 44px;
+  height: 44px;
+  border-radius: 10px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  background: rgba(33, 38, 45, 0.7);
+  border: 1px solid #30363d;
+  color: #58a6ff;
+  transition: all 0.2s ease;
+}
+
+.feature-highlight-card:hover .feature-icon-wrapper {
+  border-color: #58a6ff;
+  background: rgba(56, 139, 253, 0.15);
+  color: #79c0ff;
+  transform: scale(1.05);
+}
+
+.feature-svg-icon {
+  width: 22px;
+  height: 22px;
+  display: block;
 }
 
 .feature-title {
