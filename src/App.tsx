@@ -2,6 +2,7 @@ import React, { useState } from 'react'
 import './App.css'
 import { CommitChart, CommitWeek } from './components/CommitChart'
 import { TopContributors, Contributor } from './components/TopContributors'
+import { RecentCommits, GitHubCommitItem } from './components/RecentCommits'
 
 export interface GitHubRepoData {
   id: number
@@ -145,6 +146,11 @@ function App() {
   const [contributorsLoading, setContributorsLoading] = useState(false)
   const [contributorsError, setContributorsError] = useState<string | null>(null)
 
+  // Recent Commits Feed State
+  const [recentCommits, setRecentCommits] = useState<GitHubCommitItem[] | null>(null)
+  const [recentCommitsLoading, setRecentCommitsLoading] = useState(false)
+  const [recentCommitsError, setRecentCommitsError] = useState<string | null>(null)
+
   const handleAnalyze = async (e: React.FormEvent) => {
     e.preventDefault()
     setError(null)
@@ -161,6 +167,8 @@ function App() {
     setCommitActivityNotice(null)
     setContributors(null)
     setContributorsError(null)
+    setRecentCommits(null)
+    setRecentCommitsError(null)
 
     try {
       // 1. Fetch Repository Details
@@ -187,9 +195,10 @@ function App() {
       setRepoData(data)
       setLoading(false)
 
-      // 2. Fetch 52-Week Commit Activity and Contributors concurrently
+      // 2. Fetch Commit Activity, Contributors, and Recent Commits concurrently
       fetchCommitActivity(owner, repo)
       fetchContributors(owner, repo)
+      fetchRecentCommits(owner, repo)
     } catch (err: unknown) {
       console.error('Fetch error:', err)
       setError('Network error: Unable to connect to GitHub API. Please check your internet connection.')
@@ -260,6 +269,33 @@ function App() {
       setContributorsError('Failed to fetch contributors.')
     } finally {
       setContributorsLoading(false)
+    }
+  }
+
+  const fetchRecentCommits = async (owner: string, repo: string) => {
+    setRecentCommitsLoading(true)
+    setRecentCommitsError(null)
+
+    try {
+      const res = await fetch(`https://api.github.com/repos/${owner}/${repo}/commits?per_page=10`)
+
+      if (!res.ok) {
+        setRecentCommitsError('Could not load recent commits at this time.')
+        setRecentCommits(null)
+        return
+      }
+
+      const data = await res.json()
+      if (Array.isArray(data)) {
+        setRecentCommits(data)
+      } else {
+        setRecentCommits([])
+      }
+    } catch (err) {
+      console.warn('Recent commits fetch error:', err)
+      setRecentCommitsError('Failed to fetch recent commits.')
+    } finally {
+      setRecentCommitsLoading(false)
     }
   }
 
@@ -363,6 +399,13 @@ function App() {
             contributors={contributors}
             isLoading={contributorsLoading}
             error={contributorsError}
+          />
+
+          {/* Feature 8: Recent Commits Feed */}
+          <RecentCommits
+            commits={recentCommits}
+            isLoading={recentCommitsLoading}
+            error={recentCommitsError}
           />
         </main>
       )}

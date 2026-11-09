@@ -89,3 +89,4 @@ export const TopContributors: React.FC<TopContributorsProps> = ({
     </section>
   )
 }
+
