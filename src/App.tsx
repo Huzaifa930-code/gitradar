@@ -3,6 +3,8 @@ import './App.css'
 import { CommitChart, CommitWeek } from './components/CommitChart'
 import { TopContributors, Contributor } from './components/TopContributors'
 import { RecentCommits, GitHubCommitItem } from './components/RecentCommits'
+import { SkeletonDashboard } from './components/SkeletonDashboard'
+import { ErrorAlert, AppError } from './components/ErrorAlert'
 
 export interface GitHubRepoData {
   id: number
@@ -133,7 +135,7 @@ export function calculateHealthScore(repo: GitHubRepoData): HealthScoreResult {
 function App() {
   const [repoUrl, setRepoUrl] = useState('')
   const [loading, setLoading] = useState(false)
-  const [error, setError] = useState<string | null>(null)
+  const [error, setError] = useState<AppError | null>(null)
   const [repoData, setRepoData] = useState<GitHubRepoData | null>(null)
 
   // Commit Activity State
@@ -154,12 +156,15 @@ function App() {
   // Feature 9: Shareable Link State
   const [copied, setCopied] = useState(false)
 
-  const fetchCommitActivity = async (owner: string, repo: string) => {
+  const fetchCommitActivity = async (owner: string, repo: string, signal?: AbortSignal) => {
     setCommitActivityLoading(true)
     setCommitActivityNotice(null)
 
     try {
-      const commitRes = await fetch(`https://api.github.com/repos/${owner}/${repo}/stats/commit_activity`)
+      const commitRes = await fetch(
+        `https://api.github.com/repos/${owner}/${repo}/stats/commit_activity`,
+        { signal }
+      )
 
       if (commitRes.status === 202) {
         setCommitActivityNotice(
@@ -184,7 +189,8 @@ function App() {
         )
         setCommitActivity(null)
       }
-    } catch (err) {
+    } catch (err: unknown) {
+      if (err instanceof Error && err.name === 'AbortError') return
       console.warn('Commit activity fetch error:', err)
       setCommitActivityNotice('Unable to load commit activity due to network limits.')
     } finally {
@@ -192,12 +198,15 @@ function App() {
     }
   }
 
-  const fetchContributors = async (owner: string, repo: string) => {
+  const fetchContributors = async (owner: string, repo: string, signal?: AbortSignal) => {
     setContributorsLoading(true)
     setContributorsError(null)
 
     try {
-      const res = await fetch(`https://api.github.com/repos/${owner}/${repo}/contributors?per_page=5`)
+      const res = await fetch(
+        `https://api.github.com/repos/${owner}/${repo}/contributors?per_page=5`,
+        { signal }
+      )
 
       if (!res.ok) {
         setContributorsError('Could not load contributors at this time.')
@@ -211,7 +220,8 @@ function App() {
       } else {
         setContributors([])
       }
-    } catch (err) {
+    } catch (err: unknown) {
+      if (err instanceof Error && err.name === 'AbortError') return
       console.warn('Contributors fetch error:', err)
       setContributorsError('Failed to fetch contributors.')
     } finally {
@@ -219,12 +229,15 @@ function App() {
     }
   }
 
-  const fetchRecentCommits = async (owner: string, repo: string) => {
+  const fetchRecentCommits = async (owner: string, repo: string, signal?: AbortSignal) => {
     setRecentCommitsLoading(true)
     setRecentCommitsError(null)
 
     try {
-      const res = await fetch(`https://api.github.com/repos/${owner}/${repo}/commits?per_page=10`)
+      const res = await fetch(
+        `https://api.github.com/repos/${owner}/${repo}/commits?per_page=10`,
+        { signal }
+      )
 
       if (!res.ok) {
         setRecentCommitsError('Could not load recent commits at this time.')
@@ -238,7 +251,8 @@ function App() {
       } else {
         setRecentCommits([])
       }
-    } catch (err) {
+    } catch (err: unknown) {
+      if (err instanceof Error && err.name === 'AbortError') return
       console.warn('Recent commits fetch error:', err)
       setRecentCommitsError('Failed to fetch recent commits.')
     } finally {
@@ -251,7 +265,12 @@ function App() {
 
     const parsed = parseGitHubRepo(input)
     if (!parsed) {
-      setError('Please enter a valid GitHub repository URL or format (e.g. owner/repo)')
+      setError({
+        type: 'INVALID_FORMAT',
+        title: 'Incorrect Repository URL Format',
+        message:
+          'Please enter a valid GitHub repository URL (e.g. https://github.com/facebook/react) or shorthand format (e.g. facebook/react).'
+      })
       return
     }
 
@@ -265,6 +284,7 @@ function App() {
     }
 
     setLoading(true)
+    setRepoData(null)
     setCommitActivity(null)
     setCommitActivityNotice(null)
     setContributors(null)
@@ -272,11 +292,51 @@ function App() {
     setRecentCommits(null)
     setRecentCommitsError(null)
 
-    try {
-      const response = await fetch(`https://api.github.com/repos/${owner}/${repo}`)
+    // Feature 10: Timeout Controller (12 seconds)
+    const controller = new AbortController()
+    const timeoutId = setTimeout(() => {
+      controller.abort()
+    }, 12000)
 
+    try {
+      const response = await fetch(`https://api.github.com/repos/${owner}/${repo}`, {
+        signal: controller.signal
+      })
+      clearTimeout(timeoutId)
+
+      // Rate limit hit (403 or 429)
+      if (
+        response.status === 403 ||
+        response.status === 429 ||
+        response.headers.get('x-ratelimit-remaining') === '0'
+      ) {
+        const resetHeader = response.headers.get('x-ratelimit-reset')
+        let resetNotice = 'Please wait a short while and try again.'
+        if (resetHeader) {
+          const resetMinutes = Math.max(
+            1,
+            Math.round((parseInt(resetHeader, 10) * 1000 - Date.now()) / (1000 * 60))
+          )
+          resetNotice = `Limit resets in approximately ${resetMinutes} minute${resetMinutes === 1 ? '' : 's'}.`
+        }
+
+        setError({
+          type: 'RATE_LIMIT',
+          title: 'GitHub API Rate Limit Reached',
+          message: `GitHub limits unauthenticated API requests to 60 calls per hour. ${resetNotice}`
+        })
+        setRepoData(null)
+        setLoading(false)
+        return
+      }
+
+      // 404 Not Found
       if (response.status === 404) {
-        setError(`Repository "${owner}/${repo}" was not found on GitHub.`)
+        setError({
+          type: 'NOT_FOUND',
+          title: 'Repository Not Found',
+          message: `The repository "${owner}/${repo}" does not exist on GitHub or might be set to private. Please check the spelling.`
+        })
         setRepoData(null)
         setLoading(false)
         return
@@ -284,8 +344,12 @@ function App() {
 
       if (!response.ok) {
         const errorData = await response.json().catch(() => ({}))
-        const message = errorData.message || `GitHub API error (Status ${response.status})`
-        setError(message)
+        const message = errorData.message || `GitHub returned HTTP error status ${response.status}.`
+        setError({
+          type: 'UNKNOWN',
+          title: 'Unable to Load Repository',
+          message
+        })
         setRepoData(null)
         setLoading(false)
         return
@@ -300,8 +364,23 @@ function App() {
       fetchContributors(owner, repo)
       fetchRecentCommits(owner, repo)
     } catch (err: unknown) {
-      console.error('Fetch error:', err)
-      setError('Network error: Unable to connect to GitHub API. Please check your internet connection.')
+      clearTimeout(timeoutId)
+      if (err instanceof Error && err.name === 'AbortError') {
+        setError({
+          type: 'TIMEOUT',
+          title: 'Request Timed Out',
+          message:
+            'GitHub took too long to respond (>12 seconds). This is usually due to a slow network connection or GitHub API latency.'
+        })
+      } else {
+        console.error('Fetch error:', err)
+        setError({
+          type: 'NETWORK_ERROR',
+          title: 'Connection Error',
+          message:
+            'Unable to communicate with the GitHub API. Please check your internet connection and try again.'
+        })
+      }
       setRepoData(null)
       setLoading(false)
     }
@@ -337,6 +416,12 @@ function App() {
     analyzeRepo(repoUrl, true)
   }
 
+  const handleRetry = () => {
+    if (repoUrl) {
+      analyzeRepo(repoUrl, false)
+    }
+  }
+
   const handleCopyLink = async () => {
     try {
       if (navigator.clipboard && window.isSecureContext) {
@@ -363,7 +448,7 @@ function App() {
 
   return (
     <div className="container">
-      <header className={`header ${repoData ? 'header-compact' : ''}`}>
+      <header className={`header ${repoData || loading ? 'header-compact' : ''}`}>
         <div className="logo-badge">
           <span className="radar-ping"></span>
           GitRadar
@@ -385,16 +470,18 @@ function App() {
             {loading ? 'Analyzing...' : 'Analyze'}
           </button>
         </div>
-
-        {error && (
-          <div className="error-message" role="alert">
-            <span className="error-icon">⚠️</span>
-            <span>{error}</span>
-          </div>
-        )}
       </form>
 
-      {repoData && healthScore && (
+      {/* Feature 10: Rich Error Alert with Try Again action */}
+      {error && !loading && (
+        <ErrorAlert error={error} onRetry={handleRetry} />
+      )}
+
+      {/* Feature 10: Comprehensive Pulsing Skeleton Loading State */}
+      {loading && <SkeletonDashboard />}
+
+      {/* Results View */}
+      {!loading && repoData && healthScore && (
         <main className="results-container">
           <div className="repo-header">
             <div className="repo-header-top">
