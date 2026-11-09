@@ -53,7 +53,7 @@
 
 1. **Clone the repository:**
    ```bash
-   git clone https://github.com/<YOUR-USERNAME>/gitradar.git
+   git clone https://github.com/Huzaifa930-code/gitradar.git
    cd gitradar
    ```
 
