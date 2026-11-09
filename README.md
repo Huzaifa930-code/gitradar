@@ -2,13 +2,13 @@
 
 > **Instant visual breakdown and codebase health analyzer for any public GitHub repository.**
 
-[![Vercel Deployment](https://img.shields.io/badge/Deployed%20on-Vercel-black?style=for-the-badge&logo=vercel)](https://gitradar.vercel.app)
+[![GitHub Pages](https://img.shields.io/badge/Deployed%20on-GitHub%20Pages-222222?style=for-the-badge&logo=githubpages&logoColor=white)](https://huzaifa930-code.github.io/gitradar)
 [![React](https://img.shields.io/badge/React-18-blue?style=for-the-badge&logo=react)](https://react.dev)
 [![TypeScript](https://img.shields.io/badge/TypeScript-5-3178C6?style=for-the-badge&logo=typescript)](https://www.typescriptlang.org)
 [![Vite](https://img.shields.io/badge/Vite-5-646CFF?style=for-the-badge&logo=vite)](https://vitejs.dev)
 [![Recharts](https://img.shields.io/badge/Recharts-2-22b5bf?style=for-the-badge)](https://recharts.org)
 
-🔗 **Live Demo:** [https://gitradar.vercel.app](https://gitradar.vercel.app)
+🔗 **Live Demo:** [https://huzaifa930-code.github.io/gitradar](https://huzaifa930-code.github.io/gitradar)
 
 ---
 
@@ -39,7 +39,7 @@
 - **Data Visualization:** Recharts
 - **Styling:** CSS3 (GitHub Dark Theme design tokens, CSS Grid, Flexbox, Keyframe Animations)
 - **API:** GitHub REST API v3 (unauthenticated, zero cost, zero API keys required)
-- **Deployment:** Vercel (SPA routing configured with `vercel.json`)
+- **Deployment:** GitHub Pages (and Vercel compatible)
 
 ---
 
