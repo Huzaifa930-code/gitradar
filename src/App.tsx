@@ -1,6 +1,7 @@
 import React, { useState } from 'react'
 import './App.css'
 import { CommitChart, CommitWeek } from './components/CommitChart'
+import { TopContributors, Contributor } from './components/TopContributors'
 
 export interface GitHubRepoData {
   id: number
@@ -139,6 +140,11 @@ function App() {
   const [commitActivityLoading, setCommitActivityLoading] = useState(false)
   const [commitActivityNotice, setCommitActivityNotice] = useState<string | null>(null)
 
+  // Top Contributors State
+  const [contributors, setContributors] = useState<Contributor[] | null>(null)
+  const [contributorsLoading, setContributorsLoading] = useState(false)
+  const [contributorsError, setContributorsError] = useState<string | null>(null)
+
   const handleAnalyze = async (e: React.FormEvent) => {
     e.preventDefault()
     setError(null)
@@ -153,6 +159,8 @@ function App() {
     setLoading(true)
     setCommitActivity(null)
     setCommitActivityNotice(null)
+    setContributors(null)
+    setContributorsError(null)
 
     try {
       // 1. Fetch Repository Details
@@ -179,8 +187,9 @@ function App() {
       setRepoData(data)
       setLoading(false)
 
-      // 2. Fetch 52-Week Commit Activity
+      // 2. Fetch 52-Week Commit Activity and Contributors concurrently
       fetchCommitActivity(owner, repo)
+      fetchContributors(owner, repo)
     } catch (err: unknown) {
       console.error('Fetch error:', err)
       setError('Network error: Unable to connect to GitHub API. Please check your internet connection.')
@@ -224,6 +233,33 @@ function App() {
       setCommitActivityNotice('Unable to load commit activity due to network limits.')
     } finally {
       setCommitActivityLoading(false)
+    }
+  }
+
+  const fetchContributors = async (owner: string, repo: string) => {
+    setContributorsLoading(true)
+    setContributorsError(null)
+
+    try {
+      const res = await fetch(`https://api.github.com/repos/${owner}/${repo}/contributors?per_page=5`)
+
+      if (!res.ok) {
+        setContributorsError('Could not load contributors at this time.')
+        setContributors(null)
+        return
+      }
+
+      const data = await res.json()
+      if (Array.isArray(data)) {
+        setContributors(data)
+      } else {
+        setContributors([])
+      }
+    } catch (err) {
+      console.warn('Contributors fetch error:', err)
+      setContributorsError('Failed to fetch contributors.')
+    } finally {
+      setContributorsLoading(false)
     }
   }
 
@@ -320,6 +356,13 @@ function App() {
             data={commitActivity}
             isLoading={commitActivityLoading}
             notice={commitActivityNotice}
+          />
+
+          {/* Feature 7: Top Contributors */}
+          <TopContributors
+            contributors={contributors}
+            isLoading={contributorsLoading}
+            error={contributorsError}
           />
         </main>
       )}
