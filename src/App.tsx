@@ -163,7 +163,12 @@ function App() {
     try {
       const commitRes = await fetch(
         `https://api.github.com/repos/${owner}/${repo}/stats/commit_activity`,
-        { signal }
+        {
+          signal,
+          headers: {
+            Authorization: `Bearer ${import.meta.env.VITE_GITHUB_TOKEN}`
+          }
+        }
       )
 
       if (commitRes.status === 202) {
@@ -205,7 +210,12 @@ function App() {
     try {
       const res = await fetch(
         `https://api.github.com/repos/${owner}/${repo}/contributors?per_page=5`,
-        { signal }
+        {
+          signal,
+          headers: {
+            Authorization: `Bearer ${import.meta.env.VITE_GITHUB_TOKEN}`
+          }
+        }
       )
 
       if (!res.ok) {
@@ -236,7 +246,12 @@ function App() {
     try {
       const res = await fetch(
         `https://api.github.com/repos/${owner}/${repo}/commits?per_page=10`,
-        { signal }
+        {
+          signal,
+          headers: {
+            Authorization: `Bearer ${import.meta.env.VITE_GITHUB_TOKEN}`
+          }
+        }
       )
 
       if (!res.ok) {
@@ -300,7 +315,10 @@ function App() {
 
     try {
       const response = await fetch(`https://api.github.com/repos/${owner}/${repo}`, {
-        signal: controller.signal
+        signal: controller.signal,
+        headers: {
+          Authorization: `Bearer ${import.meta.env.VITE_GITHUB_TOKEN}`
+        }
       })
       clearTimeout(timeoutId)
 
